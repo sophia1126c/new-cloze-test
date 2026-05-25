@@ -40,7 +40,7 @@ ensure_nltk_data()
 # =========================
 # 기본 설정
 # =========================
-MAX_BLANKS = 20
+MAX_BLANKS = 25
 TOKEN_CANDIDATE_RE = re.compile(r"[A-Za-z0-9\uac00-\ud7a3]+")
 
 
@@ -101,7 +101,6 @@ def translate_paragraphs(paragraphs: List[str]) -> List[str]:
 
 def generate_questions_from_docx(
     file_like,
-    blank_ratio_fraction: float,
     random_seed: str = "",
     max_blanks: int = MAX_BLANKS,
 ) -> Tuple[List[str], Dict[int, str], List[str], List[str]]:
@@ -139,9 +138,7 @@ def generate_questions_from_docx(
     if n_candidates == 0:
         return original_paragraphs, {}, original_paragraphs, []
 
-    requested_blanks = int(round(n_candidates * blank_ratio_fraction))
-    requested_blanks = max(1, requested_blanks)
-    requested_blanks = min(requested_blanks, n_candidates, max_blanks)
+    requested_blanks = min(25, n_candidates)
 
     chosen_positions = set(random.sample(all_candidates, requested_blanks))
 
@@ -228,7 +225,7 @@ st.title("📘 Mixed Cloze Test")
 st.markdown(
     """
 Word(.docx) 지문을 업로드하면 **혼합형 cloze test**를 생성합니다.  
-빈칸에 들어갈 단어는 **단어은행**에서 선택할 수 있으며, 전체 빈칸 수는 **최대 20개**로 제한됩니다.
+빈칸에 들어갈 단어는 **단어은행**에서 선택할 수 있으며, 전체 빈칸 수는 **최대 25개**로 제한됩니다.
 """
 )
 
@@ -245,24 +242,13 @@ st.markdown("---")
 st.header("⚙️ 문제 설정")
 st.info("문항 유형은 전체 cloze test 중 **혼합형**으로 고정됩니다. 특정 품사만 따로 제한하지 않습니다.")
 
-col_ratio, col_seed = st.columns(2)
+random_seed = st.text_input(
+    "랜덤 seed 선택 사항",
+    value="",
+    placeholder="같은 문제를 다시 만들고 싶을 때 숫자 입력",
+)
 
-with col_ratio:
-    blank_pct = st.slider(
-        "빈칸 비율 (%)",
-        min_value=5,
-        max_value=80,
-        value=20,
-        step=5,
-        help="전체 후보 단어 중 몇 %를 빈칸으로 만들지 정합니다. 단, 최종 빈칸 수는 최대 20개입니다.",
-    )
-
-with col_seed:
-    random_seed = st.text_input(
-        "랜덤 seed 선택 사항",
-        value="",
-        placeholder="같은 문제를 다시 만들고 싶을 때 숫자 입력",
-    )
+st.info("빈칸 수는 자동 생성되며 최대 25개로 고정됩니다.")
 
 st.info("답안 입력 방식: 빈칸별 선택")
 show_translation = st.checkbox("문제 생성 후 한글 해석도 함께 제공", value=True)
@@ -286,9 +272,8 @@ with col_make:
 
                 questions, answer_map, original_paragraphs, word_bank = generate_questions_from_docx(
                     uploaded_file,
-                    blank_ratio_fraction=blank_pct / 100.0,
                     random_seed=random_seed,
-                    max_blanks=MAX_BLANKS,
+                    max_blanks=25,
                 )
 
                 st.session_state["questions"] = questions
