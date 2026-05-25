@@ -130,7 +130,6 @@ def choose_non_adjacent_positions(all_candidates, target_count):
 
 def generate_questions_from_docx(
     file_like,
-    random_seed: str = "",
     max_blanks: int = MAX_BLANKS,
 ) -> Tuple[List[str], Dict[int, str], List[str], List[str]]:
     """
@@ -138,9 +137,6 @@ def generate_questions_from_docx(
     품사 제한 없이 전체 단어를 후보로 삼되, 전체 빈칸 수는 max_blanks 이하로 제한.
     """
     original_paragraphs = read_docx_paragraphs(file_like)
-
-    if random_seed.strip():
-        random.seed(random_seed.strip())
 
     tokenized_paragraphs = []
     all_candidates = []
@@ -271,12 +267,6 @@ st.markdown("---")
 st.header("⚙️ 문제 설정")
 st.info("문항 유형은 전체 cloze test 중 **혼합형**으로 고정됩니다. 특정 품사만 따로 제한하지 않습니다.")
 
-random_seed = st.text_input(
-    "랜덤 seed 선택 사항",
-    value="",
-    placeholder="같은 문제를 다시 만들고 싶을 때 숫자 입력",
-)
-
 st.info("빈칸 수는 자동 생성되며 최대 25개로 고정됩니다.")
 
 st.info("답안 입력 방식: 빈칸별 선택")
@@ -301,7 +291,6 @@ with col_make:
 
                 questions, answer_map, original_paragraphs, word_bank = generate_questions_from_docx(
                     uploaded_file,
-                    random_seed=random_seed,
                     max_blanks=25,
                 )
 
@@ -361,15 +350,21 @@ else:
 
         st.markdown("---")
 
-        st.subheader("✏️ 답안 입력")
+        st.subheader("✏️ 번호별 콤보박스 선택")
 
-        for num in sorted(answer_map.keys()):
-            st.selectbox(
-                label=f"{num}번",
-                options=[""] + word_bank,
-                key=f"answer_{num}",
-                index=0,
-            )
+        st.caption("각 번호 옆의 콤보박스에서 정답 단어를 바로 선택하세요.")
+
+        nums = sorted(answer_map.keys())
+        for start in range(0, len(nums), 5):
+            cols = st.columns(5)
+            for col, num in zip(cols, nums[start:start + 5]):
+                with col:
+                    st.selectbox(
+                        label=f"{num}번",
+                        options=[""] + word_bank,
+                        key=f"answer_{num}",
+                        index=0,
+                    )
 
         if st.button("✅ 채점하기"):
             correct_count, total, results = grade_answers(answer_map)
