@@ -99,6 +99,35 @@ def translate_paragraphs(paragraphs: List[str]) -> List[str]:
     return translated
 
 
+
+def choose_non_adjacent_positions(all_candidates, target_count):
+    """
+    같은 문단 안에서 서로 바로 붙어 있는 단어가 동시에 빈칸이 되지 않도록 선택합니다.
+    예: (1)_____ (2)_____ 처럼 연속 빈칸이 생기지 않게 함.
+    """
+    shuffled = list(all_candidates)
+    random.shuffle(shuffled)
+
+    chosen = []
+    blocked = set()
+
+    for para_idx, tok_idx in shuffled:
+        if (para_idx, tok_idx) in blocked:
+            continue
+
+        chosen.append((para_idx, tok_idx))
+
+        # 같은 문단의 앞/뒤 토큰은 선택 금지
+        blocked.add((para_idx, tok_idx - 1))
+        blocked.add((para_idx, tok_idx))
+        blocked.add((para_idx, tok_idx + 1))
+
+        if len(chosen) >= target_count:
+            break
+
+    return chosen
+
+
 def generate_questions_from_docx(
     file_like,
     random_seed: str = "",
@@ -140,7 +169,7 @@ def generate_questions_from_docx(
 
     requested_blanks = min(25, n_candidates)
 
-    chosen_positions = set(random.sample(all_candidates, requested_blanks))
+    chosen_positions = set(choose_non_adjacent_positions(all_candidates, requested_blanks))
 
     answer_map: Dict[int, str] = {}
     question_paragraphs: List[str] = []
